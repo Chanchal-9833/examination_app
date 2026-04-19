@@ -13,9 +13,9 @@ const transporter = nodemailer.createTransport({
 
 const sendOTPEmail = async (email, name, otp) => {
   const mailOptions = {
-    from: `"Exam Portal" <${process.env.EMAIL_USER}>`,
+    from: `"VESASC EXAM Portal" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: 'Your OTP for Exam Portal Registration',
+    subject: 'Your OTP for VESASC Exam Portal Registration',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
         <div style="background: #1a237e; padding: 24px; text-align: center;">
