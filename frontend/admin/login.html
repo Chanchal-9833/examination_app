@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login - Exam Portal</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper" style="background: linear-gradient(135deg, #0d1757 0%, #1a237e 100%);">
+    <div class="auth-card" style="max-width: 400px;">
+      <div class="auth-logo">
+        <img src="../img/logo.png" alt="VESASC" style="height:80px; width:auto; margin-bottom:10px;">
+        <h1>VESASC Admin Panel</h1>
+        <p>Examination Administration</p>
+      </div>
+
+      <div id="alertBox" class="alert"></div>
+
+      <div class="form-group">
+        <label>Admin Username</label>
+        <input type="text" id="username" placeholder="admin" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary" onclick="handleLogin()">Login to Admin Panel</button>
+
+      <p class="text-center mt-2">
+        <a href="../index.html" class="link">← Student Portal</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:5000/api';
+
+    if (localStorage.getItem('adminToken')) {
+      window.location.href = 'dashboard.html';
+    }
+
+    function showAlert(msg, type) {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.className = `alert alert-${type} show`;
+    }
+
+    async function handleLogin() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) return showAlert('Please enter credentials.', 'error');
+
+      try {
+        const res = await fetch(`${API}/auth/admin-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) return showAlert(data.message, 'error');
+
+        localStorage.setItem('adminToken', data.token);
+        window.location.href = 'dashboard.html';
+      } catch (err) {
+        showAlert('Connection error.', 'error');
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+  </script>
+</body>
+</html>

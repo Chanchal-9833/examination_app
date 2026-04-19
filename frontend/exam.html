@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam - Exam Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { overflow: hidden; }
+    .exam-topbar {
+      background: var(--primary);
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .exam-topbar .brand { font-size: 16px; font-weight: 700; }
+    .top-center { display: flex; align-items: center; gap: 12px; }
+    .question-progress { font-size: 13px; opacity: 0.9; }
+    .submit-confirm-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none; align-items: center; justify-content: center;
+      z-index: 999;
+    }
+    .submit-confirm-overlay.show { display: flex; }
+    .confirm-box {
+      background: white; border-radius: 16px; padding: 36px;
+      max-width: 460px; width: 90%; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .confirm-box h2 { color: var(--primary); margin-bottom: 12px; }
+    .confirm-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 12px; margin: 20px 0;
+    }
+    .confirm-stat {
+      background: var(--bg); border-radius: 8px; padding: 12px; text-align: center;
+    }
+    .confirm-stat-val { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+    .confirm-stat-lbl { font-size: 11px; color: var(--text-muted); }
+    .confirm-buttons { display: flex; gap: 12px; margin-top: 20px; }
+    .subject-section-title {
+      font-size: 12px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 1px;
+      padding: 8px 0 4px; border-top: 1px solid var(--border); margin-top: 8px;
+    }
+    .subject-section-title:first-child { border-top: none; margin-top: 0; }
+    .palette-scroll { overflow-y: auto; flex: 1; }
+    .submit-final-btn {
+      width: 100%; padding: 13px; background: var(--danger);
+      color: white; border: none; border-radius: 8px;
+      font-family: var(--font); font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: background 0.2s; margin-top: auto;
+    }
+    .submit-final-btn:hover { background: #b71c1c; }
+    @media (max-width: 768px) {
+      body { overflow: auto; }
+      .exam-layout { height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="exam-topbar">
+  <div class="brand" style="display:flex; align-items:center; gap:10px;">
+    <img src="img/logo.png" alt="VESASC" style="height:38px; width:auto;">
+    <span id="examTitleTop">VESASC Exam Portal</span>
+  </div>
+  <div class="top-center">
+    <div class="question-progress" id="questionProgress">Q 1 / 0</div>
+    <div class="timer-box" id="timerBox">00:00:00</div>
+  </div>
+  <div style="font-size:13px; opacity:0.9;" id="studentNameTop"></div>
+</div>
+
+<!-- Exam Layout -->
+<div class="exam-layout">
+
+  <!-- LEFT: Question Area -->
+  <div class="question-area" id="questionArea">
+    <div class="loading-overlay show" id="loadingOverlay" style="position:relative; height:300px; display:flex; background:white; border-radius:12px;">
+      <div class="spinner"></div>
+      <p>Loading questions...</p>
+    </div>
+  </div>
+
+  <!-- RIGHT: Palette -->
+  <div class="palette-area">
+    <div>
+      <div style="font-size:13px; font-weight:700; color:var(--primary); margin-bottom:10px;">QUESTION PALETTE</div>
+      <!-- Legend -->
+      <div class="palette-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--q-not-visited)"></div><span>Not Visited</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--q-not-answered)"></div><span>Not Answered</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--q-answered)"></div><span>Answered</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--q-marked)"></div><span>Marked for Review</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--q-marked-answered)"></div><span>Answered + Marked</span></div>
+      </div>
+    </div>
+
+    <!-- Subject Tabs -->
+    <div>
+      <div style="font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">Filter by Subject</div>
+      <div class="subject-tabs">
+        <button class="subject-tab active" onclick="filterPalette('All')">All</button>
+        <button class="subject-tab" onclick="filterPalette('English')">ENG</button>
+        <button class="subject-tab" onclick="filterPalette('Quants')">QUA</button>
+        <button class="subject-tab" onclick="filterPalette('General Knowledge')">GK</button>
+        <button class="subject-tab" onclick="filterPalette('Computer Skills')">CS</button>
+      </div>
+    </div>
+
+    <!-- Palette Grid -->
+    <div class="palette-scroll">
+      <div id="paletteGrid"></div>
+    </div>
+
+    <!-- Submit Button -->
+    <button class="submit-final-btn" onclick="showSubmitConfirm()">⚑ Submit Exam</button>
+  </div>
+</div>
+
+<!-- Submit Confirm Modal -->
+<div class="submit-confirm-overlay" id="submitOverlay">
+  <div class="confirm-box">
+    <div style="font-size:40px; margin-bottom:8px;">⚠️</div>
+    <h2>Submit Exam?</h2>
+    <p style="color:var(--text-muted);">Once submitted, you cannot change your answers.</p>
+    <div class="confirm-stats">
+      <div class="confirm-stat">
+        <div class="confirm-stat-val" id="cntAnswered">0</div>
+        <div class="confirm-stat-lbl">Answered</div>
+      </div>
+      <div class="confirm-stat">
+        <div class="confirm-stat-val" id="cntNotAnswered">0</div>
+        <div class="confirm-stat-lbl">Not Answered</div>
+      </div>
+      <div class="confirm-stat">
+        <div class="confirm-stat-val" id="cntMarked">0</div>
+        <div class="confirm-stat-lbl">Marked for Review</div>
+      </div>
+    </div>
+    <div class="confirm-buttons">
+      <button class="btn btn-secondary" style="flex:1" onclick="hideSubmitConfirm()">← Continue Exam</button>
+      <button class="btn btn-danger" style="flex:1" id="finalSubmitBtn" onclick="submitExam()">Submit Now</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:5000/api';
+  const token = localStorage.getItem('token');
+  const studentName = localStorage.getItem('studentName');
+
+  if (!token) window.location.href = 'index.html';
+
+  document.getElementById('studentNameTop').textContent = '👤 ' + (studentName || '');
+
+  // State
+  let questions = [];
+  let currentIndex = 0;
+  let examDuration = 180; // minutes, updated from settings
+  let timerInterval = null;
+  let timeLeft = 0; // seconds
+  let currentFilter = 'All';
+
+  // Per-question state: 'not-visited' | 'not-answered' | 'answered' | 'marked' | 'marked-answered'
+  let questionState = [];
+
+  // answers: { questionId: 'A'|'B'|'C'|'D' }
+  // Load saved answers from localStorage (resume on accidental refresh)
+  let answers = JSON.parse(localStorage.getItem('examAnswers') || '{}');
+
+  // ===================== LOAD QUESTIONS =====================
+ async function loadExam() {
+  try {
+    const settingsRes = await fetch(`${API}/exam/settings`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (settingsRes.status === 401) {
+      localStorage.clear();
+      return window.location.href = 'index.html';
+    }
+
+    if (settingsRes.status === 404 || !settingsRes.ok) {
+      const errData = await settingsRes.json();
+      showExamError(errData.message || 'No active exam found. Please contact your administrator.');
+      return;
+    }
+
+    const settings = await settingsRes.json();
+    examDuration = (settings.duration || 60) * 60;
+    document.getElementById('examTitleTop').textContent = settings.examTitle || 'Exam';
+
+    const savedStart = localStorage.getItem('examStartTime');
+    if (savedStart) {
+      const elapsed = Math.floor((Date.now() - parseInt(savedStart)) / 1000);
+      timeLeft = Math.max(0, examDuration - elapsed);
+    } else {
+      timeLeft = examDuration;
+      localStorage.setItem('examStartTime', Date.now().toString());
+    }
+
+    const res = await fetch(`${API}/exam/questions`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (res.status === 401) {
+      localStorage.clear();
+      return window.location.href = 'index.html';
+    }
+
+    if (res.status === 403) {
+      return window.location.href = 'result.html';
+    }
+
+    if (res.status === 404 || !res.ok) {
+      const err = await res.json();
+      showExamError(err.message || 'No questions found for this exam.');
+      return;
+    }
+
+    const data = await res.json();
+    questions = data.questions;
+    localStorage.setItem('examSetId', data.examSetId || '');
+
+    questionState = questions.map(q => {
+      return answers[q._id] ? 'answered' : 'not-visited';
+    });
+
+    renderPalette();
+    showQuestion(0);
+    startTimer();
+
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.remove();
+
+  } catch (err) {
+    console.error('loadExam error:', err);
+    showExamError('Connection error. Please check the server is running and refresh the page.');
+  }
+}
+
+function showExamError(message) {
+  clearInterval(timerInterval);
+  document.body.innerHTML = `
+    <div style="
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      font-family: var(--font, sans-serif);
+      padding: 24px;
+    ">
+      <div style="
+        background: white;
+        border-radius: 16px;
+        padding: 48px 36px;
+        max-width: 500px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        border-top: 6px solid #c62828;
+      ">
+        <div style="font-size:56px; margin-bottom:16px;">⚠️</div>
+        <h2 style="color:#c62828; margin-bottom:12px; font-size:22px;">Exam Unavailable</h2>
+        <p style="color:#6c757d; font-size:15px; line-height:1.7; margin-bottom:32px;">${message}</p>
+        <button onclick="window.location.href='instructions.html'" style="
+          background:#1a237e; color:white; border:none;
+          padding:13px 32px; border-radius:8px;
+          font-size:15px; font-weight:600; cursor:pointer;
+        ">← Go Back to Instructions</button>
+      </div>
+    </div>`;
+}
+  // ===================== TIMER =====================
+  function startTimer() {
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        submitExam(true);
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const h = Math.floor(timeLeft / 3600);
+    const m = Math.floor((timeLeft % 3600) / 60);
+    const s = timeLeft % 60;
+    const display = `${pad(h)}:${pad(m)}:${pad(s)}`;
+    const box = document.getElementById('timerBox');
+    box.textContent = display;
+    box.className = 'timer-box';
+    if (timeLeft <= 300) box.classList.add('danger');
+    else if (timeLeft <= 600) box.classList.add('warning');
+  }
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  // ===================== RENDER QUESTION =====================
+  function showQuestion(index) {
+    if (index < 0 || index >= questions.length) return;
+
+    // Update previous question state if was not-visited
+    if (currentIndex !== index && questionState[currentIndex] === 'not-visited') {
+      questionState[currentIndex] = 'not-answered';
+    }
+    currentIndex = index;
+
+    // Mark as visited if not-visited
+    if (questionState[index] === 'not-visited') {
+      questionState[index] = 'not-answered';
+    }
+
+    const q = questions[index];
+    const savedAnswer = answers[q._id] ? answers[q._id].selected : null;
+    const isMarked = questionState[index] === 'marked' || questionState[index] === 'marked-answered';
+
+    // Auto-filter palette to current question's subject
+    currentFilter = q.subject;
+
+    document.getElementById('questionProgress').textContent = `Q ${index + 1} / ${questions.length}`;
+
+    const html = `
+      <div class="question-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div class="question-number">Question ${index + 1} of ${questions.length}</div>
+          ${isMarked ? '<span class="review-badge">⚑ Marked for Review</span>' : ''}
+        </div>
+        <span class="question-subject-badge badge-${q.subject.replace(/ /g,'-')}">${q.subject}</span>
+        <div class="question-text">${q.questionText}</div>
+
+        <div class="options-list">
+          ${['A','B','C','D'].map(opt => `
+            <div class="option-item ${savedAnswer === opt ? 'selected' : ''}"
+                 onclick="selectOption('${q._id}', '${opt}', ${index})" id="opt-${opt}">
+              <div class="option-label">${opt}</div>
+              <div class="option-text">${q.options[opt]}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="nav-buttons">
+          <button class="btn btn-secondary" onclick="navigate(-1)" ${index === 0 ? 'disabled' : ''}>
+            ← Previous
+          </button>
+          <button class="btn btn-outline" onclick="toggleMark(${index})" id="markBtn">
+            ${isMarked ? '✕ Unmark' : '⚑ Mark for Review'}
+          </button>
+          <button class="btn btn-secondary" onclick="clearResponse(${index})">
+            ✕ Clear
+          </button>
+          <button class="btn btn-primary" style="width:auto; padding: 12px 24px;"
+                  onclick="navigate(1)" ${index === questions.length - 1 ? 'disabled' : ''}>
+            Save & Next →
+          </button>
+        </div>
+      </div>
+    `;
+    document.getElementById('questionArea').innerHTML = html;
+    
+    // Update palette and tabs to match current question's subject
+    updatePaletteFilter(q.subject);
+  }
+
+  function updatePaletteFilter(subject) {
+    currentFilter = subject;
+    document.querySelectorAll('.subject-tab').forEach(t => t.classList.remove('active'));
+    
+    const tabs = document.querySelectorAll('.subject-tab');
+    tabs.forEach(t => {
+      const tabSubject = {
+        'All': 'All',
+        'ENG': 'English',
+        'QUA': 'Quants',
+        'GK': 'General Knowledge',
+        'CS': 'Computer Skills'
+      };
+      
+      const tabText = t.textContent.trim();
+      if (tabSubject[tabText] === subject) {
+        t.classList.add('active');
+      }
+    });
+    
+    renderPalette();
+  }
+
+  // ===================== SELECT OPTION =====================
+  function selectOption(questionId, option, index) {
+    const q = questions[index];
+    // Store both the displayed selection AND the optionMap so backend can decode
+    answers[questionId] = {
+      selected: option,
+      optionMap: q._optionMap || {}
+    };
+    // Save to localStorage (no API call — performance optimized)
+    localStorage.setItem('examAnswers', JSON.stringify(answers));
+
+    // Update state
+    if (questionState[index] === 'marked') {
+      questionState[index] = 'marked-answered';
+    } else {
+      questionState[index] = 'answered';
+    }
+
+    // Update UI
+    document.querySelectorAll('.option-item').forEach(el => el.classList.remove('selected'));
+    document.getElementById(`opt-${option}`)?.classList.add('selected');
+    renderPalette();
+  }
+
+  function clearResponse(index) {
+    const q = questions[index];
+    delete answers[q._id];
+    localStorage.setItem('examAnswers', JSON.stringify(answers));
+    questionState[index] = 'not-answered';
+    showQuestion(index);
+  }
+
+  // ===================== MARK FOR REVIEW =====================
+  function toggleMark(index) {
+    const state = questionState[index];
+    if (state === 'marked') questionState[index] = 'not-answered';
+    else if (state === 'marked-answered') questionState[index] = 'answered';
+    else if (state === 'answered') questionState[index] = 'marked-answered';
+    else questionState[index] = 'marked';
+    showQuestion(index);
+  }
+
+  // ===================== NAVIGATION =====================
+  function navigate(dir) {
+    const newIndex = currentIndex + dir;
+    if (newIndex >= 0 && newIndex < questions.length) {
+      showQuestion(newIndex);
+    }
+  }
+
+  // ===================== PALETTE =====================
+  function renderPalette() {
+    const subjects = ['English', 'Quants', 'General Knowledge', 'Computer Skills'];
+    let html = '';
+
+    subjects.forEach(subj => {
+      const subjQuestions = questions
+        .map((q, i) => ({ q, i }))
+        .filter(({ q }) => q.subject === subj);
+
+      if (subjQuestions.length === 0) return;
+      if (currentFilter !== 'All' && currentFilter !== subj) return;
+
+      html += `<div class="subject-section-title">${subj}</div>`;
+      html += `<div class="palette-grid" style="margin-bottom:8px;">`;
+      subjQuestions.forEach(({ q, i }) => {
+        const state = questionState[i] || 'not-visited';
+        const isActive = i === currentIndex ? 'active' : '';
+        html += `<button class="palette-btn ${state} ${isActive}" onclick="showQuestion(${i})" title="Q${i+1}: ${q.subject}">${i + 1}</button>`;
+      });
+      html += `</div>`;
+    });
+
+    document.getElementById('paletteGrid').innerHTML = html;
+  }
+
+  function filterPalette(subj) {
+    // Find first question of this subject (preferring unanswered)
+    let firstQIndex = -1;
+    let firstUnansweredIndex = -1;
+    
+    questions.forEach((q, i) => {
+      if (q.subject === subj) {
+        if (firstQIndex === -1) firstQIndex = i;
+        
+        const state = questionState[i];
+        if (firstUnansweredIndex === -1 && (state === 'not-answered' || state === 'not-visited')) {
+          firstUnansweredIndex = i;
+        }
+      }
+    });
+    
+    // Jump to first unanswered question of this subject, or first question if all answered
+    const targetIndex = firstUnansweredIndex !== -1 ? firstUnansweredIndex : firstQIndex;
+    if (targetIndex !== -1) {
+      showQuestion(targetIndex);
+    }
+  }
+
+  // ===================== SUBMIT =====================
+  function showSubmitConfirm() {
+    const answered = questionState.filter(s => s === 'answered' || s === 'marked-answered').length;
+    const notAnswered = questionState.filter(s => s === 'not-answered' || s === 'not-visited').length;
+    const marked = questionState.filter(s => s === 'marked' || s === 'marked-answered').length;
+
+    document.getElementById('cntAnswered').textContent = answered;
+    document.getElementById('cntNotAnswered').textContent = notAnswered;
+    document.getElementById('cntMarked').textContent = marked;
+    document.getElementById('submitOverlay').classList.add('show');
+  }
+
+  function hideSubmitConfirm() {
+    document.getElementById('submitOverlay').classList.remove('show');
+  }
+
+  async function submitExam(autoSubmit = false) {
+    if (!autoSubmit && !document.getElementById('submitOverlay').classList.contains('show')) {
+      showSubmitConfirm();
+      return;
+    }
+
+    const btn = document.getElementById('finalSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+    clearInterval(timerInterval);
+
+    try {
+      // Single API call with all answers + examSetId
+      const res = await fetch(`${API}/exam/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ answers, examSetId: localStorage.getItem('examSetId') })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || 'Submission failed. Please try again.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Submit Now'; }
+        return;
+      }
+
+      // Save result and clear exam data
+      localStorage.setItem('examResult', JSON.stringify(data.result));
+      localStorage.removeItem('examAnswers');
+      localStorage.removeItem('examStartTime');
+
+      window.location.href = 'result.html';
+    } catch (err) {
+      alert('Connection error during submission. Please try again immediately.');
+      if (btn) { btn.disabled = false; btn.textContent = 'Submit Now'; }
+    }
+  }
+
+  // Warn before accidental close
+  window.addEventListener('beforeunload', (e) => {
+    if (questions.length > 0) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // Start loading
+  loadExam();
+</script>
+</body>
+</html>

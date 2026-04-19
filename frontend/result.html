@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Result - Exam Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .grade-badge {
+      display: inline-block;
+      font-size: 48px;
+      font-weight: 700;
+      font-family: var(--mono);
+      padding: 12px 32px;
+      border-radius: 12px;
+      margin: 16px 0;
+    }
+    .subject-result-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+    }
+    .subject-result-row:last-child { border-bottom: none; }
+    .subject-result-row.header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .confetti { font-size: 24px; }
+    .percentage-bar {
+      height: 10px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .percentage-fill {
+      height: 100%;
+      border-radius: 10px;
+      background: var(--primary);
+      transition: width 1s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="brand" style="display:flex; align-items:center; gap:10px;">
+      <img src="img/logo.png" alt="VESASC" style="height:38px; width:auto;">
+      <span>VESASC Exam Portal</span>
+    </div>
+    <div id="studentNameTop" style="font-size:14px;"></div>
+  </div>
+
+  <div class="result-wrapper">
+
+    <!-- Score Card -->
+    <div class="card" style="text-align:center;">
+      <div class="confetti">🎉</div>
+      <h1 style="font-size:22px; color:var(--primary); margin-bottom:4px;">Exam Completed!</h1>
+      <p id="examSetLabel" style="color:var(--text-muted); font-size:14px;">Your result has been sent to your email</p>
+
+      <div class="score-ring" style="margin: 24px 0;">
+        <div class="score-circle" id="scoreCircle">
+          <div class="score-value" id="scoreVal">—</div>
+          <div class="score-max" id="scoreMax">/ —</div>
+        </div>
+      </div>
+
+      <div class="grade-badge" id="gradeBadge">—</div>
+      <div style="font-size: 18px; color: var(--text-muted);" id="percentageDisplay">—%</div>
+      <div class="percentage-bar" style="max-width:300px; margin:12px auto;">
+        <div class="percentage-fill" id="percentFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="totalQVal" style="color:var(--primary)">—</div>
+        <div class="stat-label">Total Questions</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="attemptedVal" style="color:var(--warning)">—</div>
+        <div class="stat-label">Attempted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="correctVal" style="color:var(--success)">—</div>
+        <div class="stat-label">Correct</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="incorrectVal" style="color:var(--danger)">—</div>
+        <div class="stat-label">Incorrect</div>
+      </div>
+    </div>
+
+    <!-- Subject-wise -->
+    <div class="card">
+      <h2>Subject-wise Performance</h2>
+      <div class="subject-result-row header">
+        <div>Subject</div>
+        <div>Correct</div>
+        <div>Incorrect</div>
+        <div>Score</div>
+      </div>
+      <div id="subjectRows"></div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <button class="btn btn-primary" style="flex:1; max-width:200px;" onclick="window.print()">🖨 Print Result</button>
+      <button class="btn btn-secondary" style="flex:1; max-width:200px;" onclick="logout()">🚪 Logout</button>
+    </div>
+
+  </div>
+
+  <script>
+    const studentName = localStorage.getItem('studentName');
+    document.getElementById('studentNameTop').textContent = '👤 ' + (studentName || '');
+
+    const result = JSON.parse(localStorage.getItem('examResult') || 'null');
+
+    if (!result) {
+      // Try to redirect back if no result found
+      const token = localStorage.getItem('token');
+      if (!token) window.location.href = 'index.html';
+      else window.location.href = 'instructions.html';
+    } else {
+      renderResult(result);
+    }
+
+    function renderResult(r) {
+      if (r.examSetName) {
+        document.getElementById('examSetLabel').textContent = `${r.examSetName} · Result emailed to you`;
+      }
+      const pct = parseFloat(r.percentage);
+      const grade = pct >= 90 ? 'A+' : pct >= 75 ? 'A' : pct >= 60 ? 'B' : pct >= 45 ? 'C' : 'D';
+      const gradeColor = pct >= 60 ? 'var(--success)' : pct >= 45 ? 'var(--warning)' : 'var(--danger)';
+
+      document.getElementById('scoreVal').textContent = r.score;
+      document.getElementById('scoreMax').textContent = `/ ${r.maxScore}`;
+      document.getElementById('scoreCircle').style.borderColor = gradeColor;
+
+      document.getElementById('gradeBadge').textContent = grade;
+      document.getElementById('gradeBadge').style.background = gradeColor + '22';
+      document.getElementById('gradeBadge').style.color = gradeColor;
+
+      document.getElementById('percentageDisplay').textContent = pct.toFixed(2) + '%';
+
+      setTimeout(() => {
+        document.getElementById('percentFill').style.width = Math.min(pct, 100) + '%';
+        document.getElementById('percentFill').style.background = gradeColor;
+      }, 300);
+
+      document.getElementById('totalQVal').textContent = r.totalQuestions;
+      document.getElementById('attemptedVal').textContent = r.attempted;
+      document.getElementById('correctVal').textContent = r.correct;
+      document.getElementById('incorrectVal').textContent = r.incorrect;
+
+      // Subject rows
+      const subjects = ['English', 'Quants', 'General Knowledge', 'Computer Skills'];
+      let html = '';
+      subjects.forEach(subj => {
+        const s = r.subjectWise?.[subj] || { correct: 0, incorrect: 0, score: 0 };
+        html += `
+          <div class="subject-result-row">
+            <div><strong>${subj}</strong></div>
+            <div style="color:var(--success); font-weight:700;">${s.correct}</div>
+            <div style="color:var(--danger); font-weight:700;">${s.incorrect}</div>
+            <div style="font-weight:700; font-family:var(--mono);">${s.score}</div>
+          </div>
+        `;
+      });
+      document.getElementById('subjectRows').innerHTML = html;
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+</html>

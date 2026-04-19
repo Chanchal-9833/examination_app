@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify OTP - Exam Portal</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="img/logo.png" alt="VESASC" style="height:80px; width:auto; margin-bottom:10px;">
+        <h1>VESASC Exam Portal</h1>
+        <p id="emailHint">Enter the OTP sent to your email</p>
+      </div>
+
+      <div id="alertBox" class="alert"></div>
+
+      <div class="form-group">
+        <label>One-Time Password (OTP)</label>
+        <input type="text" id="otp" class="otp-input" placeholder="_ _ _ _ _ _"
+          maxlength="6" autocomplete="one-time-code" inputmode="numeric">
+        <p style="font-size:12px; color: var(--text-muted); margin-top: 6px;">
+          OTP is valid for 10 minutes
+        </p>
+      </div>
+
+      <button class="btn btn-primary" id="verifyBtn" onclick="handleVerify()">
+        Verify OTP
+      </button>
+
+      <div class="text-center mt-2">
+        <button class="btn btn-secondary" id="resendBtn" onclick="resendOTP()" style="width:auto; margin: 0 auto;">
+          Resend OTP
+        </button>
+        <p id="resendTimer" style="font-size:13px; color: var(--text-muted); margin-top: 8px;"></p>
+      </div>
+
+      <p class="text-center mt-2">
+        <a href="register.html" class="link">← Back to Registration</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:5000/api';
+    const email = localStorage.getItem('pendingEmail');
+
+    if (!email) window.location.href = 'register.html';
+
+    document.getElementById('emailHint').textContent = `OTP sent to: ${email}`;
+
+    let resendCooldown = 0;
+    let cooldownInterval;
+
+    function showAlert(msg, type) {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.className = `alert alert-${type} show`;
+    }
+
+    async function handleVerify() {
+      const otp = document.getElementById('otp').value.trim();
+      if (otp.length !== 6) return showAlert('Please enter the 6-digit OTP.', 'error');
+
+      const btn = document.getElementById('verifyBtn');
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+
+      try {
+        const res = await fetch(`${API}/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, otp })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = 'Verify OTP';
+          return showAlert(data.message, 'error');
+        }
+
+        showAlert('Email verified! Redirecting to login...', 'success');
+        localStorage.removeItem('pendingEmail');
+        setTimeout(() => window.location.href = 'index.html', 1500);
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Verify OTP';
+        showAlert('Connection error. Please try again.', 'error');
+      }
+    }
+
+    async function resendOTP() {
+      if (resendCooldown > 0) return;
+
+      const btn = document.getElementById('resendBtn');
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API}/auth/resend-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+
+        if (!res.ok) return showAlert(data.message, 'error');
+
+        showAlert('New OTP sent to your email!', 'success');
+        startCooldown(60);
+      } catch (err) {
+        showAlert('Error resending OTP.', 'error');
+        btn.disabled = false;
+      }
+    }
+
+    function startCooldown(seconds) {
+      resendCooldown = seconds;
+      const btn = document.getElementById('resendBtn');
+      const timer = document.getElementById('resendTimer');
+
+      clearInterval(cooldownInterval);
+      cooldownInterval = setInterval(() => {
+        resendCooldown--;
+        timer.textContent = `Resend available in ${resendCooldown}s`;
+        if (resendCooldown <= 0) {
+          clearInterval(cooldownInterval);
+          timer.textContent = '';
+          btn.disabled = false;
+        }
+      }, 1000);
+    }
+
+    document.getElementById('otp').addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleVerify();
+    });
+  </script>
+</body>
+</html>

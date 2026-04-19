@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Portal - Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <img src="img/logo.png" alt="VESASC" style="height:80px; width:auto; margin-bottom:10px;">
+        <h1>VESASC Exam Portal</h1>
+        <p>V.E.S. — Since 1962 | Online Examination System</p>
+      </div>
+
+      <div id="alertBox" class="alert"></div>
+
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="your@email.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary" onclick="handleLogin()">Login to Exam Portal</button>
+
+      <p class="text-center mt-2">
+        New student? <a href="register.html" class="link">Register here</a>
+      </p>
+      <p class="text-center mt-1" style="font-size:13px; color: var(--text-muted);">
+        Admin? <a href="admin/login.html" class="link">Admin Panel</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:5000/api';
+
+    // Redirect if already logged in
+   // Verify token with server before redirecting
+const existingToken = localStorage.getItem('token');
+if (existingToken) {
+  fetch(`${API}/exam/settings`, {
+    headers: { Authorization: `Bearer ${existingToken}` }
+  }).then(res => {
+    if (res.status === 401) {
+      // Token invalid or expired — clear everything and stay on login
+      localStorage.clear();
+    } else {
+      // Token valid — redirect to instructions
+      window.location.href = 'instructions.html';
+    }
+  }).catch(() => {
+    // Server unreachable — clear and stay on login to be safe
+    localStorage.clear();
+  });
+}
+
+    function showAlert(msg, type) {
+      const box = document.getElementById('alertBox');
+      box.textContent = msg;
+      box.className = `alert alert-${type} show`;
+    }
+
+    async function handleLogin() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        return showAlert('Please enter email and password.', 'error');
+      }
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) return showAlert(data.message, 'error');
+
+        // Clear ALL previous session data before storing new login
+        localStorage.clear();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('studentName', data.student.name);
+        localStorage.setItem('studentEmail', data.student.email);
+
+        showAlert('Login successful! Redirecting...', 'success');
+        setTimeout(() => window.location.href = 'instructions.html', 800);
+      } catch (err) {
+        showAlert('Cannot connect to server. Please try again.', 'error');
+      }
+    }
+
+    // Allow Enter key to submit
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+  </script>
+</body>
+</html>
