@@ -224,7 +224,7 @@
 </div><!-- /container -->
 
 <script>
-const API = 'https://vesasc-examination-app.onrender.com';
+const API = 'https://vesasc-examination-app.onrender.com/api';
 const adminToken = localStorage.getItem('adminToken');
 if (!adminToken) window.location.href = 'login.html';
 const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` };
