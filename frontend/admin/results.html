@@ -122,7 +122,7 @@
   </div>
 
   <script>
-    const API = 'http://localhost:5000/api';
+    const API = 'https://vesasc-examination-app.onrender.com';
     const adminToken = localStorage.getItem('adminToken');
     if (!adminToken) window.location.href = 'login.html';
     const headers = { Authorization: `Bearer ${adminToken}` };
