@@ -3,7 +3,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Student = require('../models/Student');
-const { sendOTPEmail } = require('../utils/mailer');
+const { sendOTPEmail, sendPasswordResetEmail } = require('../utils/mailer');
+const crypto = require('crypto');
 
 // Generate 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -137,6 +138,75 @@ router.post('/admin-login', (req, res) => {
     res.json({ message: 'Admin login successful', token });
   } else {
     res.status(401).json({ message: 'Invalid admin credentials' });
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+
+    const student = await Student.findOne({ email: email.toLowerCase() });
+    if (!student) {
+      // Don't reveal if email exists or not for security
+      return res.json({ message: 'If this email is registered, a reset link has been sent.' });
+    }
+
+    if (!student.isVerified) {
+      return res.status(400).json({ message: 'This account is not verified yet. Please verify your email first.' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    student.resetToken = resetToken;
+    student.resetTokenExpiry = resetTokenExpiry;
+    await student.save();
+
+    // Send reset email
+    await sendPasswordResetEmail(student.email, student.name, resetToken);
+
+    res.json({ message: 'Password reset link sent to your email. Valid for 30 minutes.' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Server error. Please try again.' });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Token and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const student = await Student.findOne({
+      resetToken: token,
+      resetTokenExpiry: { $gt: new Date() } // token not expired
+    });
+
+    if (!student) {
+      return res.status(400).json({ message: 'Invalid or expired reset link. Please request a new one.' });
+    }
+
+    // Update password and clear token
+    student.password = await bcrypt.hash(password, 10);
+    student.resetToken = undefined;
+    student.resetTokenExpiry = undefined;
+    await student.save();
+
+    res.json({ message: 'Password reset successful! You can now login with your new password.' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Server error. Please try again.' });
   }
 });
 

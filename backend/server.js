@@ -19,7 +19,9 @@ require('./models/Result');
 // Security middleware
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(cors({
-  origin: ['https://vesasc-exam.netlify.app', 'http://localhost:3000'], // In production, restrict to your frontend domain
+ // origin: ['https://vesasc-exam.netlify.app', 'http://localhost:3000'],
+
+  origin: ['https://vesasc-exam.netlify.app', 'http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500'], // In production, restrict to your frontend domain
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

@@ -113,4 +113,45 @@ const sendResultEmail = async (email, name, result, examTitle) => {
   return transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendOTPEmail, sendResultEmail };
+const sendPasswordResetEmail = async (email, name, token) => {
+  // This URL must match your deployed frontend URL
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password.html?token=${token}`;
+
+  const mailOptions = {
+    from: `"VESASC Exam Portal" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Password Reset Request - VESASC Exam Portal',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+        <div style="background: #1a237e; padding: 24px; text-align: center;">
+          <h2 style="color: white; margin: 0;">🎓 VESASC Exam Portal</h2>
+        </div>
+        <div style="padding: 32px;">
+          <p style="font-size: 16px;">Dear <strong>${name}</strong>,</p>
+          <p>We received a request to reset your password. Click the button below to set a new password:</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${resetUrl}" style="
+              background: #1a237e;
+              color: white;
+              padding: 14px 32px;
+              border-radius: 8px;
+              text-decoration: none;
+              font-size: 16px;
+              font-weight: bold;
+              display: inline-block;
+            ">Reset My Password</a>
+          </div>
+          <p style="color: #666; font-size: 14px;">This link is valid for <strong>30 minutes</strong>.</p>
+          <p style="color: #666; font-size: 14px;">If you did not request a password reset, please ignore this email. Your password will not change.</p>
+          <p style="color: #666; font-size: 14px;">Or copy this link into your browser:</p>
+          <p style="background: #f5f5f5; padding: 10px; border-radius: 6px; font-size: 12px; word-break: break-all;">${resetUrl}</p>
+        </div>
+        <div style="background: #f5f5f5; padding: 16px; text-align: center;">
+          <p style="color: #999; font-size: 12px; margin: 0;">© 2024 VESASC Exam Portal. All rights reserved.</p>
+        </div>
+      </div>
+    `
+  };
+  return transporter.sendMail(mailOptions);
+};
+module.exports = { sendOTPEmail, sendResultEmail, sendPasswordResetEmail };
