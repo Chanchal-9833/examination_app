@@ -12,10 +12,18 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, age, education, lastCollegeName, email, mobile, password } = req.body;
+    const { name, email, contactNumber, additionalContactNumber, cetRegistrationNumber, password } = req.body;
 
-    if (!name || !age || !education || !lastCollegeName || !email || !mobile || !password) {
+    if (!name || !email || !contactNumber || !cetRegistrationNumber || !password) {
       return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    if (!/^\d{10}$/.test(contactNumber)) {
+      return res.status(400).json({ message: 'Contact number must be 10 digits' });
+    }
+
+    if (additionalContactNumber && !/^\d{10}$/.test(additionalContactNumber)) {
+      return res.status(400).json({ message: 'Additional contact number must be 10 digits' });
     }
 
     const existingStudent = await Student.findOne({ email: email.toLowerCase() });
@@ -36,8 +44,11 @@ router.post('/register', async (req, res) => {
     const otp = generateOTP();
 
     const student = new Student({
-      name, age, education, lastCollegeName,
-      email: email.toLowerCase(), mobile,
+      name,
+      email: email.toLowerCase(),
+      contactNumber,
+      additionalContactNumber: additionalContactNumber || '',
+      cetRegistrationNumber,
       password: hashedPassword,
       otp,
       otpExpiry: new Date(Date.now() + 10 * 60 * 1000)
@@ -52,7 +63,6 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ message: 'Server error. Please try again.' });
   }
 });
-
 // POST /api/auth/verify-otp
 router.post('/verify-otp', async (req, res) => {
   try {

@@ -75,6 +75,7 @@
     <button class="tab-btn" onclick="switchTab('add-q')">➕ Add Question</button>
     <button class="tab-btn" onclick="switchTab('upload')">📁 Upload JSON</button>
     <button class="tab-btn" onclick="switchTab('manage-q')">🗂 Manage Questions</button>
+    <button class="tab-btn" onclick="switchTab('students')">👥 Students</button>
   </div>
 
   <!-- ═══ TAB: EXAM SETS ═══ -->
@@ -220,7 +221,42 @@
       <div id="questionsList"><p style="color:var(--text-muted);">Select a filter or switch to this tab to load questions.</p></div>
     </div>
   </div>
+<!-- ═══ TAB: STUDENTS ═══ -->
+  <div class="tab-content" id="tab-students">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+        <h2 style="margin:0; border:none; padding:0;">Registered Students</h2>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="studentSearch" placeholder="🔍 Search name, email or CET no..."
+            oninput="filterStudents()"
+            style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px; min-width:250px;">
+          <button class="btn btn-secondary btn-sm" onclick="exportStudentsCSV()">⬇ Export CSV</button>
+        </div>
+      </div>
 
+      <p id="studentCount" style="font-size:13px; color:var(--text-muted); margin-bottom:12px;"></p>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="studentsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Contact Number</th>
+              <th>Additional Contact</th>
+              <th>CET Reg. Number</th>
+              <th>Registered On</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="studentsBody">
+            <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Click on Students tab to load.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div><!-- /container -->
 
 <script>
@@ -246,6 +282,7 @@ function switchTab(tab) {
   document.getElementById(`tab-${tab}`).classList.add('active');
   event.target.classList.add('active');
   if (tab === 'manage-q') loadQuestions();
+  if (tab === 'students') loadStudents();
 }
 
 // ── LOAD STATS & SETS ────────────────────────────────────────────────────────
@@ -532,7 +569,97 @@ async function deleteQuestion(id) {
   const res = await fetch(`${API}/admin/question/${id}`, { method: 'DELETE', headers });
   if (res.ok) { showAlert('Deleted.', 'success'); loadQuestions(); loadStats(); }
 }
+// ── STUDENTS ─────────────────────────────────────────────────────────────────
+let allStudents = [];
 
+async function loadStudents() {
+  try {
+    const res = await fetch(`${API}/admin/students`, { headers });
+    if (!res.ok) {
+      showAlert('Failed to load students.', 'error');
+      return;
+    }
+    const data = await res.json();
+    allStudents = data.students || [];
+    document.getElementById('studentCount').textContent = `${allStudents.length} registered students`;
+    renderStudentsTable(allStudents);
+  } catch(e) {
+    showAlert('Connection error loading students.', 'error');
+  }
+}
+
+function renderStudentsTable(students) {
+  const tbody = document.getElementById('studentsBody');
+  if (!students.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">No students found.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = students.map((s, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${s.name}</strong></td>
+      <td style="font-size:13px;">${s.email}</td>
+      <td>${s.contactNumber || '—'}</td>
+      <td>${s.additionalContactNumber || '—'}</td>
+      <td><span style="background:#e8eaf6; color:#1a237e; padding:2px 8px; border-radius:6px; font-size:12px; font-weight:600;">${s.cetRegistrationNumber || '—'}</span></td>
+      <td style="font-size:12px; color:var(--text-muted);">${new Date(s.createdAt).toLocaleString()}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="deleteStudent('${s._id}', '${s.name}')">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterStudents() {
+  const search = document.getElementById('studentSearch').value.toLowerCase();
+  const filtered = allStudents.filter(s =>
+    s.name.toLowerCase().includes(search) ||
+    s.email.toLowerCase().includes(search) ||
+    (s.cetRegistrationNumber || '').toLowerCase().includes(search) ||
+    (s.contactNumber || '').includes(search)
+  );
+  document.getElementById('studentCount').textContent = `${filtered.length} of ${allStudents.length} students`;
+  renderStudentsTable(filtered);
+}
+
+async function deleteStudent(id, name) {
+  if (!confirm(`Delete student "${name}"?\n\nThis will remove their account. Their exam results will still be kept.`)) return;
+  try {
+    const res = await fetch(`${API}/admin/student/${id}`, { method: 'DELETE', headers });
+    const data = await res.json();
+    if (!res.ok) return showAlert(data.message, 'error');
+    showAlert(`Student "${name}" deleted.`, 'success');
+    loadStudents();
+    loadStats();
+  } catch(e) {
+    showAlert('Error deleting student.', 'error');
+  }
+}
+
+function exportStudentsCSV() {
+  if (!allStudents.length) {
+    showAlert('No students to export.', 'error');
+    return;
+  }
+  const hdrs = ['#', 'Full Name', 'Email', 'Contact Number', 'Additional Contact', 'CET Reg. Number', 'Registered On'];
+  const rows = allStudents.map((s, i) => [
+    i + 1,
+    s.name,
+    s.email,
+    s.contactNumber || '',
+    s.additionalContactNumber || '',
+    s.cetRegistrationNumber || '',
+    new Date(s.createdAt).toLocaleString()
+  ]);
+  const csv = [hdrs, ...rows].map(row => row.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `vesasc-students-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 // Init — load sets grid first (it's the default tab), then stats
 async function init() {
   await loadSetsGrid();

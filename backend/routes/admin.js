@@ -200,6 +200,41 @@ router.delete('/questions/:examSetId', verifyAdmin, async (req, res) => {
   }
 });
 
+// ── STUDENTS ─────────────────────────────────────────────────────────────────
+
+// GET all registered students
+router.get('/students', verifyAdmin, async (req, res) => {
+  try {
+    const students = await Student.find(
+      { isVerified: true },
+      {
+        name: 1,
+        email: 1,
+        contactNumber: 1,
+        additionalContactNumber: 1,
+        cetRegistrationNumber: 1,
+        createdAt: 1,
+        _id: 1
+      }
+    ).sort({ createdAt: -1 }).lean();
+
+    res.json({ students, total: students.length });
+  } catch (err) {
+    console.error('Get students error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// DELETE a single student
+router.delete('/student/:id', verifyAdmin, async (req, res) => {
+  try {
+    await Student.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Student deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // ── RESULTS ───────────────────────────────────────────────────────────────────
 
 // GET all results (optionally filter by examSetId)
