@@ -26,6 +26,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Additional contact number must be 10 digits' });
     }
 
+    if (!/^\d{10}$/.test(cetRegistrationNumber)) {
+  return res.status(400).json({ message: 'Invalid CET registration number format' });
+}
+
     const existingStudent = await Student.findOne({ email: email.toLowerCase() });
     if (existingStudent) {
       if (existingStudent.isVerified) {
@@ -193,6 +197,7 @@ router.post('/reset-password', async (req, res) => {
     if (!token || !password) {
       return res.status(400).json({ message: 'Token and password are required' });
     }
+  
 
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
@@ -202,6 +207,7 @@ router.post('/reset-password', async (req, res) => {
       resetToken: token,
       resetTokenExpiry: { $gt: new Date() } // token not expired
     });
+
 
     if (!student) {
       return res.status(400).json({ message: 'Invalid or expired reset link. Please request a new one.' });
