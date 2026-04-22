@@ -46,7 +46,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50,                           // raised from 20 to 50 per student
+  max: 100,                           // raised from 20 to 50 per student
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {
@@ -54,7 +54,7 @@ const authLimiter = rateLimit({
            req.headers['x-real-ip'] ||
            req.ip;
   },
-  message: { message: 'Too many auth attempts, please try again later.' }
+  message: { message: ' Server is loading please wait for a while.' }
 });
 
 app.use('/api/', generalLimiter);
