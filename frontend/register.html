@@ -106,7 +106,12 @@
 
       const btn = document.getElementById('registerBtn');
       btn.disabled = true;
-      btn.textContent = 'Sending OTP...';
+      btn.textContent = 'Connecting...';
+
+      const wakeTimer = setTimeout(() => {
+        showAlert('⏳ Server is starting up, please wait 30–60 seconds. Do NOT refresh the page.', 'info');
+        btn.textContent = 'Please wait...';
+      }, 4000);
 
       try {
         const res = await fetch(`${API}/auth/register`, {
@@ -114,6 +119,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, contactNumber, additionalContactNumber, cetRegistrationNumber, password })
         });
+        clearTimeout(wakeTimer);
         const data = await res.json();
 
         if (!res.ok) {
@@ -126,6 +132,7 @@
         localStorage.setItem('pendingEmail', email);
         setTimeout(() => window.location.href = 'verify-otp.html', 1500);
       } catch (err) {
+        clearTimeout(wakeTimer);
         btn.disabled = false;
         btn.textContent = 'Register & Get OTP';
         showAlert('Cannot connect to server. Please try again.', 'error');

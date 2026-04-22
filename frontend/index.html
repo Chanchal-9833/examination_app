@@ -32,7 +32,7 @@
     ">👁</span>
   </div>
 </div>
-      <button class="btn btn-primary" onclick="handleLogin()">Login to Exam Portal</button>
+      <button class="btn btn-primary"  id="loginBtn" onclick="handleLogin()">Login to Exam Portal</button>
 
 <p class="text-center mt-1">
   <a href="forgot-password.html" class="link" style="font-size:13px;">Forgot Password?</a>
@@ -88,22 +88,37 @@ if (existingToken) {
     }
 
     async function handleLogin() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
 
-      if (!email || !password) {
-        return showAlert('Please enter email and password.', 'error');
-      }
+  if (!email || !password) {
+    return showAlert('Please enter email and password.', 'error');
+  }
 
-      try {
-        const res = await fetch(`${API}/auth/login`, {
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.textContent = 'Connecting...';
+
+  // Show waking up message after 4 seconds if still waiting
+  const wakeTimer = setTimeout(() => {
+    showAlert('⏳ Server is starting up, please wait 30–60 seconds. Do NOT refresh the page.', 'info');
+    btn.textContent = 'Please wait...';
+  }, 4000);
+
+  try {
+    const res = await fetch(`${API}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
+        clearTimeout(wakeTimer);
         const data = await res.json();
 
-        if (!res.ok) return showAlert(data.message, 'error');
+        if (!res.ok) {
+          btn.disabled = false;
+          btn.textContent = 'Login to Exam Portal';
+          return showAlert(data.message, 'error');
+        }
 
         // Clear ALL previous session data before storing new login
         localStorage.clear();
@@ -113,7 +128,10 @@ if (existingToken) {
 
         showAlert('Login successful! Redirecting...', 'success');
         setTimeout(() => window.location.href = 'instructions.html', 800);
-      } catch (err) {
+     } catch (err) {
+        clearTimeout(wakeTimer);
+        btn.disabled = false;
+        btn.textContent = 'Login to Exam Portal';
         showAlert('Cannot connect to server. Please try again.', 'error');
       }
     }
