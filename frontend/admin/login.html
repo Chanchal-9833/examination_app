@@ -21,10 +21,16 @@
         <label>Admin Username</label>
         <input type="text" id="username" placeholder="admin" autocomplete="username">
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
-      </div>
+       <div class="form-group">
+  <label>Password</label>
+  <div style="position:relative;">
+    <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" style="padding-right:44px;">
+    <span onclick="togglePassword()" style="
+      position:absolute; right:14px; top:50%; transform:translateY(-50%);
+      cursor:pointer; font-size:18px; color:#6c757d; user-select:none;
+    ">👁</span>
+  </div>
+</div>
 
       <button class="btn btn-primary" onclick="handleLogin()">Login to Admin Panel</button>
 
@@ -35,6 +41,17 @@
   </div>
 
   <script>
+     function togglePassword() {
+  const input = document.getElementById('password');
+  const icon = document.querySelector('.form-group span');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    icon.textContent = '👁';
+  }
+}
     const API = 'https://vesasc-examination-app.onrender.com/api';
 
     if (localStorage.getItem('adminToken')) {

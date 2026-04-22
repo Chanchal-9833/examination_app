@@ -193,7 +193,7 @@
 
     document.getElementById('examTitle').textContent = data.examTitle || 'Entrance Exam';
     document.getElementById('metaDuration').textContent = data.duration || 60;
-    document.getElementById('metaMarks').textContent = data.negativeMarkingEnabled ? '+4 / -1' : '+4 / 0';
+    document.getElementById('metaMarks').textContent = data.negativeMarkingEnabled ? '+1/ -1' : '+1 / 0';
 
     const list = document.getElementById('instructionList');
     (data.instructions || []).forEach((instr, i) => {

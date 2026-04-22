@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Connect to MongoDB
 connectDB();
@@ -31,21 +32,34 @@ app.use(express.json({ limit: '2mb' })); // Allow larger JSON for bulk question 
 
 // Rate limiting - protect against abuse
 const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200,
+  windowMs: 15 * 60 * 1000,
+  max: 2000,                         // raised from 200 to 2000
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {           // use real student IP not proxy IP
+    return req.headers['x-forwarded-for']?.split(',')[0] ||
+           req.headers['x-real-ip'] ||
+           req.ip;
+  },
   message: { message: 'Too many requests, please try again later.' }
 });
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 50,                           // raised from 20 to 50 per student
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    return req.headers['x-forwarded-for']?.split(',')[0] ||
+           req.headers['x-real-ip'] ||
+           req.ip;
+  },
   message: { message: 'Too many auth attempts, please try again later.' }
 });
 
 app.use('/api/', generalLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
-
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/exam', require('./routes/exam'));
