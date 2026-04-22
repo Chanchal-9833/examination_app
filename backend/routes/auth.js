@@ -26,8 +26,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'Additional contact number must be 10 digits' });
     }
 
-    if (!/^\d{10}$/.test(cetRegistrationNumber)) {
-  return res.status(400).json({ message: 'Invalid CET registration number format' });
+   if (!/^[A-Za-z]{2}\d{8}$/.test(cetRegistrationNumber)) {
+  return res.status(400).json({ message: 'CET registration number must start with 2 letters followed by 8 digits (e.g. MH12345678)' });
 }
 
     const existingStudent = await Student.findOne({ email: email.toLowerCase() });
